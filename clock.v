@@ -148,7 +148,7 @@ Section clock_specs.
       { admit. }
       wp_pures. wp_bind (! _)%E.
       iInv invN as "> HI" "Hclose".
-      iDestruct "HI" as (s2) "(Hsa & %Htick2 & Hℓ)".
+      iDestruct "HI" as (s2) "(Hsa & _ & Hℓ)".
       wp_load.
       iDestruct (State_agree with "Hsa Hfrag") as %->.
       iMod ("Hclose" with "[Hℓ Hsa]") as "_".
@@ -156,19 +156,21 @@ Section clock_specs.
       iModIntro.
       wp_pures.
       wp_bind (_ <- _)%E.
+      iMod (clock_sts_state_valid with "Hinv Hfrag") as "[Hfrag %Hvalid]"; [done |]. 
       iInv invN as "> HI" "Hclose".
-      iDestruct "HI" as (s3) "(Hsa & %Htick3 & Hℓ)".
+      iDestruct "HI" as (s3) "(Hsa & _ & Hℓ)".
       wp_store.
       iDestruct (State_agree with "Hsa Hfrag") as %->.
       iMod (State_update _ _ (nextSt s) with "Hsa Hfrag") as "[Hna Hnf]".
       iMod ("Hclose" with "[Hℓ Hna]") as "_".
       { iNext. iExists (nextSt s). rewrite nextSt_plus1.
         assert (Z.of_nat (hour s + 1)%nat = (hour s + 1)%Z) as ->; [by lia|].
-        iFrame. iPureIntro. 
-        
-        replace (hour s'' + 1)%Z with (hour s'' + 1)%nat : Z. last by lia.  iFrame. by iPureIntro. }
-      rewrite <- bool_decide_eq_false in Hne.
-      wp_pures. rewrite Hne.
+        iFrame. iPureIntro.
+        apply next_tick_star; auto. }
+      iModIntro. do 2 wp_pure _.
+      iApply ("IH" with "Hnf").
+      done.
+
 
 Open Scope Z.
 
