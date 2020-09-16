@@ -24,6 +24,10 @@ Definition initSt := MkClock 0.
 Definition nextSt (st : clockSt) : clockSt :=
   MkClock (st.(hour) + 1).
 
+Lemma nextSt_plus1 (st : clockSt) :
+  (nextSt st).(hour) = st.(hour) + 1.
+Proof. reflexivity. Qed.
+
 Inductive tick : relation clockSt :=
 | tick_next st : st.(hour) < 23 -> tick st (nextSt st)
 | tick_wrap st : st.(hour) = 23 -> tick st initSt.
@@ -42,6 +46,18 @@ Proof. Admitted.
 Lemma tick_star_preserves_validity st st':
   tick_star st st' -> valid_st st -> valid_st st'.
 Proof. Admitted.
+
+Lemma next_tick_star st :
+  valid_st st ->
+  tick_star initSt st ->
+  hour st ≠ 23 ->
+  tick_star initSt (nextSt st).
+Proof.
+  intros Hvalid Hst Hne.
+  eapply rtc_r; [eauto|].
+  apply tick_next.
+  unfold valid_st in Hvalid; lia.
+Qed.
 
 Section clock_specs.
 
@@ -108,15 +124,16 @@ Section clock_specs.
     wp_pures.
     wp_bind (!_)%E.
     iInv invN as "> HI" "Hclose".
-    iDestruct "HI" as (s') "(Hsa & %Htick' & Hℓ)".
+    iDestruct "HI" as (s1) "(Hsa & %Htick1 & Hℓ)".
     wp_load.
+    iDestruct (State_agree with "Hsa Hfrag") as %->.
     iMod ("Hclose" with "[Hℓ Hsa]") as "_".
-    { iNext. iExists s'. iFrame. by iPureIntro. }
+    { iNext. iExists s. iFrame. by iPureIntro. }
     iModIntro.
-    destruct (decide (s'.(hour) = 23)) as [->|].
+    destruct (decide (s.(hour) = 23)) as [->| Hne].
     - wp_pures. wp_bind (_ <- _)%E.
       iInv invN as "> HI" "Hclose".
-      iDestruct "HI" as (s'') "(Hsa & %Htick'' & Hℓ)".
+      iDestruct "HI" as (s2) "(Hsa & %Htick2 & Hℓ)".
       wp_store.
       iMod (State_update _ _ initSt with "Hsa Hfrag") as "[Hia Hif]".
       iMod ("Hclose" with "[Hℓ Hia]") as "_".
@@ -126,14 +143,32 @@ Section clock_specs.
       iModIntro.
       do 2 wp_pure _.
       by iApply ("IH" with "Hif").
-    - 
-    decide (s'.(hour) = 23).
-    wp_bind (_ <- _)%E.
-    iInv invN as "> HI" "Hclose".
-    iDestruct "HI" as (s'') "(Hsa & %Htick'' & Hℓ)".
-    wp_store.
- 
-
+    - wp_pures.
+      rewrite /= bool_decide_eq_false_2 //; last first.
+      { admit. }
+      wp_pures. wp_bind (! _)%E.
+      iInv invN as "> HI" "Hclose".
+      iDestruct "HI" as (s2) "(Hsa & %Htick2 & Hℓ)".
+      wp_load.
+      iDestruct (State_agree with "Hsa Hfrag") as %->.
+      iMod ("Hclose" with "[Hℓ Hsa]") as "_".
+      { iNext. iExists s. iFrame. by iPureIntro. }
+      iModIntro.
+      wp_pures.
+      wp_bind (_ <- _)%E.
+      iInv invN as "> HI" "Hclose".
+      iDestruct "HI" as (s3) "(Hsa & %Htick3 & Hℓ)".
+      wp_store.
+      iDestruct (State_agree with "Hsa Hfrag") as %->.
+      iMod (State_update _ _ (nextSt s) with "Hsa Hfrag") as "[Hna Hnf]".
+      iMod ("Hclose" with "[Hℓ Hna]") as "_".
+      { iNext. iExists (nextSt s). rewrite nextSt_plus1.
+        assert (Z.of_nat (hour s + 1)%nat = (hour s + 1)%Z) as ->; [by lia|].
+        iFrame. iPureIntro. 
+        
+        replace (hour s'' + 1)%Z with (hour s'' + 1)%nat : Z. last by lia.  iFrame. by iPureIntro. }
+      rewrite <- bool_decide_eq_false in Hne.
+      wp_pures. rewrite Hne.
 
 Open Scope Z.
 
