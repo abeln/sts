@@ -2,6 +2,7 @@ From iris.base_logic.lib Require Import invariants.
 From iris.program_logic Require Export weakestpre.
 From iris.algebra Require Import auth excl.
 From iris.heap_lang Require Import lang adequacy notation tactics proofmode.
+From iris_string_ident Require Import ltac2_string_ident.
 
 Definition clock_loop : val :=
   rec: "loop" "l" :=
@@ -36,7 +37,7 @@ Lemma tick_preserves_validity st st':
   tick st st' -> valid_st st -> valid_st st'.
 Proof. Admitted.
 
-Lemma rtc_tick_preserves_validity st st':
+Lemma tick_star_preserves_validity st st':
   tick_star st st' -> valid_st st -> valid_st st'.
 Proof. Admitted.
 
@@ -83,13 +84,14 @@ Section clock_specs.
       StateFrag s ={E}=∗ StateFrag s ∗ ⌜valid_st s⌝.
   Proof.
     iIntros (HE) "#Hi Hsf".
-    iInv invN as (s') "(>Hs &>%&?&?&?)".
-    iDestruct (State_agree with "Hs Hsf") as %->.
+    iInv invN as "> Hinv". iDestruct "Hinv" as (s') "(Hsa & %Htick & Hℓ)".
+    iDestruct (State_agree with "Hsa Hsf") as %->.
     iModIntro; iFrame "Hsf".
     iSplitL.
     { iNext; iExists _; iFrame; done. }
     iModIntro; iPureIntro.
-    eapply Htrans_rtc_preserves_validity; eauto.
+    eapply tick_star_preserves_validity; eauto.
+    apply init_valid.
   Qed.
 
 Open Scope Z.
