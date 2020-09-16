@@ -112,6 +112,11 @@ Section clock_specs.
     apply init_valid.
   Qed.
 
+  Lemma silly n :
+     n ≠ 23 ->
+     #n ≠ #23.
+  Proof. Admitted.
+
   Lemma clock_loop_spec (s : clockSt) ℓ :
     {{{ clock_sts_invariant ℓ ∗
         StateFrag s }}}
@@ -145,7 +150,7 @@ Section clock_specs.
       by iApply ("IH" with "Hif").
     - wp_pures.
       rewrite /= bool_decide_eq_false_2 //; last first.
-      { admit. }
+      { by apply silly. }
       wp_pures. wp_bind (! _)%E.
       iInv invN as "> HI" "Hclose".
       iDestruct "HI" as (s2) "(Hsa & _ & Hℓ)".
@@ -156,7 +161,7 @@ Section clock_specs.
       iModIntro.
       wp_pures.
       wp_bind (_ <- _)%E.
-      iMod (clock_sts_state_valid with "Hinv Hfrag") as "[Hfrag %Hvalid]"; [done |]. 
+      iMod (clock_sts_state_valid with "Hinv Hfrag") as "[Hfrag %Hvalid]"; [done |].
       iInv invN as "> HI" "Hclose".
       iDestruct "HI" as (s3) "(Hsa & _ & Hℓ)".
       wp_store.
@@ -170,8 +175,8 @@ Section clock_specs.
       iModIntro. do 2 wp_pure _.
       iApply ("IH" with "Hnf").
       done.
-
-
+  Qed.
+  
 Open Scope Z.
 
 Lemma Zeven_add_2 n : Z.even n -> Z.even (n + 2).
