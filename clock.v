@@ -6,8 +6,10 @@ From iris_string_ident Require Import ltac2_string_ident.
 
 Definition clock_loop : val :=
   rec: "loop" "l" :=
-    "l" <- !"l" + #1 ;;
-    if: !"l" = #24 then "l" <- #0 else #() ;;
+    (if: !"l" = #23 then
+      "l" <- #0
+    else
+      "l" <- !"l" + #1) ;;
     "loop" "l".
 
 Definition clock : val :=
@@ -93,6 +95,45 @@ Section clock_specs.
     eapply tick_star_preserves_validity; eauto.
     apply init_valid.
   Qed.
+
+  Lemma clock_loop_spec (s : clockSt) ℓ :
+    {{{ clock_sts_invariant ℓ ∗
+        StateFrag s }}}
+      clock_loop #ℓ
+    {{{ RET #(); False }}}.
+  Proof.
+    iIntros (ϕ) "[#Hinv Hfrag] Hcont".
+    rewrite /clock_loop.
+    iLöb as "IH" forall (s).
+    wp_pures.
+    wp_bind (!_)%E.
+    iInv invN as "> HI" "Hclose".
+    iDestruct "HI" as (s') "(Hsa & %Htick' & Hℓ)".
+    wp_load.
+    iMod ("Hclose" with "[Hℓ Hsa]") as "_".
+    { iNext. iExists s'. iFrame. by iPureIntro. }
+    iModIntro.
+    destruct (decide (s'.(hour) = 23)) as [->|].
+    - wp_pures. wp_bind (_ <- _)%E.
+      iInv invN as "> HI" "Hclose".
+      iDestruct "HI" as (s'') "(Hsa & %Htick'' & Hℓ)".
+      wp_store.
+      iMod (State_update _ _ initSt with "Hsa Hfrag") as "[Hia Hif]".
+      iMod ("Hclose" with "[Hℓ Hia]") as "_".
+      { iNext.
+        iExists initSt. simpl.
+        iFrame. eauto. }
+      iModIntro.
+      do 2 wp_pure _.
+      by iApply ("IH" with "Hif").
+    - 
+    decide (s'.(hour) = 23).
+    wp_bind (_ <- _)%E.
+    iInv invN as "> HI" "Hclose".
+    iDestruct "HI" as (s'') "(Hsa & %Htick'' & Hℓ)".
+    wp_store.
+ 
+
 
 Open Scope Z.
 
