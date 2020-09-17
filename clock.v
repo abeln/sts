@@ -209,15 +209,10 @@ Proof.
     as "(Hh & Hℓ & _)".
   { subst h. rewrite lookup_delete; done. }
   replace (<[ℓ:=Some #0]> h) with σ1.(heap); last first.
-  { apply map_eq; intros ℓ.
-    destruct (decide (ℓ = ℓC)) as [->|].
-    { rewrite HC lookup_insert; done. }
-    destruct (decide (ℓ = ℓB)) as [->|].
-    { rewrite HB lookup_insert_ne; last done. rewrite lookup_insert; done. }
-    destruct (decide (ℓ = ℓA)) as [->|].
-    { rewrite HA; do 2 (rewrite lookup_insert_ne; last done).
-      rewrite lookup_insert; done. }
-    repeat rewrite lookup_insert_ne; [|done|done|done].
+  { apply map_eq; intros ℓ1.
+    destruct (decide (ℓ1 = ℓ)) as [->|].
+    { rewrite Hσ lookup_insert; done. }
+    repeat rewrite lookup_insert_ne; [|done].
     rewrite /h.
     repeat rewrite lookup_delete_ne //. }
   set (ST := Excl' initSt : optionUR (exclR (leibnizO clockSt))).
