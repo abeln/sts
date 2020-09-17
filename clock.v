@@ -37,15 +37,30 @@ Definition tick_star := rtc tick.
 Definition valid_st (st : clockSt) : Prop := st.(hour) <= 23.
 
 Lemma init_valid : valid_st initSt.
-Proof. Admitted.
+Proof.
+  rewrite /valid_st /initSt.
+  simpl; lia.
+Qed.
 
 Lemma tick_preserves_validity st st':
   tick st st' -> valid_st st -> valid_st st'.
-Proof. Admitted.
+Proof.
+  intros Htick Hvalid.
+  destruct st as [h].
+  rewrite /valid_st. rewrite /nextSt.
+  inversion Htick; [simpl in *; lia| rewrite /initSt; simpl; lia].
+Qed.
 
 Lemma tick_star_preserves_validity st st':
   tick_star st st' -> valid_st st -> valid_st st'.
-Proof. Admitted.
+Proof.
+  intros Hticks.
+  induction Hticks as [| x y z Htick Hticks IH];
+    intros Hvalid; [assumption|].
+  apply IH.
+  eapply tick_preserves_validity;
+    [eapply Htick|assumption].
+Qed.
 
 Lemma next_tick_star st :
   valid_st st ->
