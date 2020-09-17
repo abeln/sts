@@ -195,6 +195,60 @@ Lemma clock_loop_correctness (ℓ : loc) :
     ∃ s : clockSt,
       tick_star initSt s ∧
       σ2.(heap) !! ℓ = Some (Some #s.(hour)).
-Proof. Admitted.
-
-(* TODO: correctness of closed program *)
+Proof.
+  intros t2 σ1 σ2 Hσ [k [κs Hsteps]]%erased_steps_nsteps.
+  eapply (wp_strong_adequacy clockΣ _); [|done]=> ?; simpl.
+  iIntros "".
+  iMod (proph_map_init κs σ1.(used_proph_id)) as (?) "Hp".
+  (* TODO: why do we delete and later insert ℓ in σ1? *)
+  set (h := delete ℓ σ1.(heap)).
+  iMod (gen_heap_init h) as (?) "Hh".
+  iMod (inv_heap_init loc (option val)) as (?) ">Hi".
+  pose ((HeapG _ _ _ _ _)).
+  iMod (gen_heap_alloc _ ℓ (Some #0) with "Hh")
+    as "(Hh & Hℓ & _)".
+  { subst h. rewrite lookup_delete; done. }
+  replace (<[ℓ:=Some #0]> h) with σ1.(heap); last first.
+  { apply map_eq; intros ℓ.
+    destruct (decide (ℓ = ℓC)) as [->|].
+    { rewrite HC lookup_insert; done. }
+    destruct (decide (ℓ = ℓB)) as [->|].
+    { rewrite HB lookup_insert_ne; last done. rewrite lookup_insert; done. }
+    destruct (decide (ℓ = ℓA)) as [->|].
+    { rewrite HA; do 2 (rewrite lookup_insert_ne; last done).
+      rewrite lookup_insert; done. }
+    repeat rewrite lookup_insert_ne; [|done|done|done].
+    rewrite /h.
+    repeat rewrite lookup_delete_ne //. }
+  set (ST := Excl' initSt : optionUR (exclR (leibnizO clockSt))).
+  iMod (own_alloc (● ST ⋅ ◯ ST)) as (γ) "[HA HF]".
+  { apply auth_both_valid; done. }
+  rewrite /ST; clear ST.
+  iAssert (|={⊤}=> clock_sts_invariant γ ℓ)%I
+    with "[Hℓ HA]" as ">#Hinv".
+  { iApply inv_alloc.
+    iNext. iExists initSt; iFrame.
+    iPureIntro; constructor. }
+  iModIntro.
+  iExists NotStuck,
+  (λ σ κs n, (gen_heap_ctx σ.(heap) ∗ proph_map_ctx κs σ.(used_proph_id))%I),
+  (λ v, True%I),
+  (λ _, True%I).
+  iFrame "Hp Hh".
+  iSplitL.
+  { iApply (hanoi_top_level_wp with "[$HF]"); first done.
+    iNext; iIntros "?"; done. }
+  iIntros (e2 t2' ->) "%HNS [Hσ2 _] Hpost _".
+  iInv invN as (s) ">(Hs & %Htr & HℓA & HℓB & HℓC)" "_".
+  iMod (fupd_intro_mask') as "_"; last iModIntro; first solve_ndisj.
+  iDestruct (gen_heap_valid with "Hσ2 HℓA") as %HℓA.
+  iDestruct (gen_heap_valid with "Hσ2 HℓB") as %HℓB.
+  iDestruct (gen_heap_valid with "Hσ2 HℓC") as %HℓC.
+  iAssert (⌜is_Some (to_val e2) → s = final_Hstate n⌝)%I with "[Hs Hpost]"
+    as "%He2".
+  { iIntros ([v2 ->]); simpl.
+    iApply (State_agree with "Hs Hpost"). }
+  iPureIntro.
+  split; first by intros; eapply HNS.
+  exists s; done.
+Qed.
