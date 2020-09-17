@@ -231,18 +231,14 @@ Proof.
   (λ _, True%I).
   iFrame "Hp Hh".
   iSplitL.
-  { iApply (hanoi_top_level_wp with "[$HF]"); first done.
+  { iApply (clock_loop_spec with "[$HF]"); first done.
     iNext; iIntros "?"; done. }
   iIntros (e2 t2' ->) "%HNS [Hσ2 _] Hpost _".
-  iInv invN as (s) ">(Hs & %Htr & HℓA & HℓB & HℓC)" "_".
+  iInv invN as "> HI" "_".
+  iDestruct "HI" as (s) "(Hsa & %Htick & Hℓ)".
+  (* TODO: review *)
   iMod (fupd_intro_mask') as "_"; last iModIntro; first solve_ndisj.
-  iDestruct (gen_heap_valid with "Hσ2 HℓA") as %HℓA.
-  iDestruct (gen_heap_valid with "Hσ2 HℓB") as %HℓB.
-  iDestruct (gen_heap_valid with "Hσ2 HℓC") as %HℓC.
-  iAssert (⌜is_Some (to_val e2) → s = final_Hstate n⌝)%I with "[Hs Hpost]"
-    as "%He2".
-  { iIntros ([v2 ->]); simpl.
-    iApply (State_agree with "Hs Hpost"). }
+  iDestruct (gen_heap_valid with "Hσ2 Hℓ") as %Hℓ.
   iPureIntro.
   split; first by intros; eapply HNS.
   exists s; done.
